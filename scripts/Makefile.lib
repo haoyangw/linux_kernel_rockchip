@@ -505,6 +505,12 @@ quiet_cmd_uimage = UIMAGE  $@
 			-a $(UIMAGE_LOADADDR) -e $(UIMAGE_ENTRYADDR) \
 			-n $(UIMAGE_NAME) -d $< $@
 
+quiet_cmd_scr = MKIMAGE $@
+	  cmd_scr = mkimage -C none -A $(ARCH) -T script -d $< $@
+
+$(obj)/%.scr: $(src)/%.cmd FORCE
+	$(call if_changed,scr)
+
 # XZ
 # ---------------------------------------------------------------------------
 # Use xzkern to compress the kernel image and xzmisc to compress other things.

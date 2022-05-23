@@ -1,3 +1,8 @@
+DTC_FLAGS_meson-g12a-radxa-zero := -@
+DTC_FLAGS_meson-g12b-radxa-zero-2pro := -@
+
+subdir-y += overlays
+
 # SPDX-License-Identifier: GPL-2.0
 dtb-$(CONFIG_ARCH_MESON) += meson-a1-ad401.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-axg-jethome-jethub-j100.dtb

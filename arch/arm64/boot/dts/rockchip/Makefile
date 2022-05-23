@@ -1,3 +1,22 @@
+DTC_FLAGS_rk3308-rock-pi-s := -@
+DTC_FLAGS_rk3308-rock-s0 := -@
+DTC_FLAGS_rk3328-rock-pi-e := -@
+DTC_FLAGS_rk3399-rock-4c-plus := -@
+DTC_FLAGS_rk3399-rock-pi-4a-plus := -@
+DTC_FLAGS_rk3399-rock-pi-4a := -@
+DTC_FLAGS_rk3399-rock-pi-4b-plus := -@
+DTC_FLAGS_rk3399-rock-pi-4b := -@
+DTC_FLAGS_rk3399-rock-pi-4c := -@
+DTC_FLAGS_rk3566-radxa-cm3-io := -@
+DTC_FLAGS_rk3566-radxa-cm3-sodimm-io := -@
+DTC_FLAGS_rk3568-radxa-e25 := -@
+DTC_FLAGS_rk3568-rock-3a := -@
+DTC_FLAGS_rk3588-rock-5a := -@
+DTC_FLAGS_rk3588-rock-5b-v11 := -@
+DTC_FLAGS_rk3588-rock-5b := -@
+
+subdir-y += overlays
+
 # SPDX-License-Identifier: GPL-2.0
 dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-evb.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-engicam-px30-core-ctouch2.dtb
