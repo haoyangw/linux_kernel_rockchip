@@ -54,6 +54,7 @@ struct rockchip_grf_reg_field {
  * @spdif_sel: grf register field of spdif_sel
  * @i2s_sel: grf register field of i2s_sel
  * @edp_mode: grf register field of edp_mode
+ * @mem_clk_auto_gating: grf register field of mem_clk_auto_gating
  * @chip_type: specific chip type
  * @ssc: check if SSC is supported by source
  * @audio: check if audio is supported by source
@@ -64,6 +65,7 @@ struct rockchip_dp_chip_data {
 	const struct rockchip_grf_reg_field spdif_sel;
 	const struct rockchip_grf_reg_field i2s_sel;
 	const struct rockchip_grf_reg_field edp_mode;
+	const struct rockchip_grf_reg_field mem_clk_auto_gating;
 	u32	chip_type;
 	bool	ssc;
 	bool	audio;
@@ -392,6 +394,10 @@ static void rockchip_dp_drm_encoder_enable(struct drm_encoder *encoder,
 	if (old_crtc_state && old_crtc_state->self_refresh_active)
 		return;
 
+	ret = rockchip_grf_field_write(dp->grf, &dp->data->mem_clk_auto_gating, 1);
+	if (ret != 0)
+		DRM_DEV_ERROR(dp->dev, "Could not write to GRF reg mem_clk_auto_gating: %d\n", ret);
+
 	ret = drm_of_encoder_active_endpoint_id(dp->dev->of_node, encoder);
 	if (ret < 0)
 		return;
@@ -400,7 +406,7 @@ static void rockchip_dp_drm_encoder_enable(struct drm_encoder *encoder,
 
 	ret = rockchip_grf_field_write(dp->grf, &dp->data->lcdc_sel, ret);
 	if (ret != 0)
-		DRM_DEV_ERROR(dp->dev, "Could not write to GRF: %d\n", ret);
+		DRM_DEV_ERROR(dp->dev, "Could not write to GRF reg lcdc_sel: %d\n", ret);
 }
 
 static void rockchip_dp_drm_encoder_disable(struct drm_encoder *encoder,
@@ -478,7 +484,8 @@ rockchip_dp_drm_encoder_atomic_check(struct drm_encoder *encoder,
 	s->bus_flags = di->bus_flags;
 	s->tv_state = &conn_state->tv;
 	s->eotf = HDMI_EOTF_TRADITIONAL_GAMMA_SDR;
-	s->color_space = V4L2_COLORSPACE_DEFAULT;
+	s->color_encoding = DRM_COLOR_YCBCR_BT709;
+	s->color_range = DRM_COLOR_YCBCR_FULL_RANGE;
 	/**
 	 * It's priority to user rate range define in dtsi.
 	 */
@@ -699,7 +706,9 @@ static int rockchip_dp_probe(struct platform_device *pdev)
 	if (IS_ERR(dp->adp))
 		return PTR_ERR(dp->adp);
 
-	if (dp->data->split_mode && device_property_read_bool(dev, "split-mode")) {
+	if (dp->data->split_mode &&
+	    (device_property_read_bool(dev, "split-mode") ||
+	     device_property_read_bool(dev, "dual-channel"))) {
 		struct rockchip_dp_device *secondary =
 				rockchip_dp_find_by_id(dev->driver, !dp->id);
 		if (!secondary) {
@@ -709,6 +718,7 @@ static int rockchip_dp_probe(struct platform_device *pdev)
 
 		dp->plat_data.right = secondary->adp;
 		dp->plat_data.split_mode = true;
+		dp->plat_data.dual_channel_mode = device_property_read_bool(dev, "dual-channel");
 		secondary->plat_data.panel = dp->plat_data.panel;
 		secondary->plat_data.left = dp->adp;
 		secondary->plat_data.split_mode = true;
@@ -817,6 +827,19 @@ static const struct rockchip_dp_chip_data rk3568_edp[] = {
 	{ /* sentinel */ }
 };
 
+static const struct rockchip_dp_chip_data rk3576_edp[] = {
+	{
+		.chip_type = RK3588_EDP,
+		.spdif_sel = GRF_REG_FIELD(0x0000, 5, 5),
+		.i2s_sel = GRF_REG_FIELD(0x0000, 4, 4),
+		.mem_clk_auto_gating = GRF_REG_FIELD(0x0020, 1, 1),
+		.ssc = true,
+		.audio = true,
+		.split_mode = true,
+	},
+	{ /* sentinel */ }
+};
+
 static const struct rockchip_dp_chip_data rk3588_edp[] = {
 	{
 		.chip_type = RK3588_EDP,
@@ -843,6 +866,7 @@ static const struct of_device_id rockchip_dp_dt_ids[] = {
 	{.compatible = "rockchip,rk3288-dp", .data = &rk3288_dp },
 	{.compatible = "rockchip,rk3399-edp", .data = &rk3399_edp },
 	{.compatible = "rockchip,rk3568-edp", .data = &rk3568_edp },
+	{.compatible = "rockchip,rk3576-edp", .data = &rk3576_edp },
 	{.compatible = "rockchip,rk3588-edp", .data = &rk3588_edp },
 	{}
 };

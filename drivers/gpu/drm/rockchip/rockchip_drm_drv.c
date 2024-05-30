@@ -26,6 +26,7 @@
 #include <drm/drm_displayid.h>
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_dma_helper.h>
+#include <drm/drm_gem_framebuffer_helper.h>
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
@@ -48,7 +49,7 @@
 #define DRIVER_NAME	"rockchip"
 #define DRIVER_DESC	"RockChip Soc DRM"
 #define DRIVER_DATE	"20140818"
-#define DRIVER_MAJOR	3
+#define DRIVER_MAJOR	4
 #define DRIVER_MINOR	0
 
 #define for_each_displayid_db(displayid, block, idx, length) \
@@ -97,6 +98,42 @@ void rockchip_drm_dbg(const struct device *dev, enum rockchip_drm_debug_category
 
 	va_end(args);
 }
+
+bool rockchip_drm_is_afbc(struct drm_plane *plane, u64 modifier)
+{
+	int i;
+
+	if (modifier == DRM_FORMAT_MOD_LINEAR)
+		return false;
+
+	if (!drm_is_afbc(modifier))
+		return false;
+
+	for (i = 0 ; i < plane->modifier_count; i++)
+		if (plane->modifiers[i] == modifier)
+			break;
+
+	return (i < plane->modifier_count) ? true : false;
+}
+EXPORT_SYMBOL(rockchip_drm_is_afbc);
+
+bool rockchip_drm_is_rfbc(struct drm_plane *plane, u64 modifier)
+{
+	int i;
+
+	if (modifier == DRM_FORMAT_MOD_LINEAR)
+		return false;
+
+	if (!IS_ROCKCHIP_RFBC_MOD(modifier))
+		return false;
+
+	for (i = 0 ; i < plane->modifier_count; i++)
+		if (plane->modifiers[i] == modifier)
+			break;
+
+	return (i < plane->modifier_count) ? true : false;
+}
+EXPORT_SYMBOL(rockchip_drm_is_rfbc);
 
 /**
  * rockchip_drm_wait_vact_end
@@ -413,39 +450,32 @@ int rockchip_drm_add_modes_noedid(struct drm_connector *connector)
 }
 EXPORT_SYMBOL(rockchip_drm_add_modes_noedid);
 
-static const struct rockchip_drm_width_dclk {
-	int width;
-	u32 dclk_khz;
-} rockchip_drm_dclk[] = {
-	{1920, 148500},
-	{2048, 200000},
-	{2560, 280000},
-	{3840, 594000},
-	{4096, 594000},
-	{7680, 2376000},
+static const char * const color_encoding_name[] = {
+	[DRM_COLOR_YCBCR_BT601] = "BT.601",
+	[DRM_COLOR_YCBCR_BT709] = "BT.709",
+	[DRM_COLOR_YCBCR_BT2020] = "BT.2020",
 };
 
-u32 rockchip_drm_get_dclk_by_width(int width)
+static const char * const color_range_name[] = {
+	[DRM_COLOR_YCBCR_LIMITED_RANGE] = "Limited",
+	[DRM_COLOR_YCBCR_FULL_RANGE] = "Full",
+};
+
+const char *rockchip_drm_get_color_encoding_name(enum drm_color_encoding encoding)
 {
-	int i = 0;
-	u32 dclk_khz;
+	if (WARN_ON(encoding >= ARRAY_SIZE(color_encoding_name)))
+		return "unknown";
 
-	for (i = 0; i < ARRAY_SIZE(rockchip_drm_dclk); i++) {
-		if (width == rockchip_drm_dclk[i].width) {
-			dclk_khz = rockchip_drm_dclk[i].dclk_khz;
-			break;
-		}
-	}
-
-	if (i == ARRAY_SIZE(rockchip_drm_dclk)) {
-		DRM_ERROR("Can't not find %d width solution and use 148500 khz as max dclk\n", width);
-
-		dclk_khz = 148500;
-	}
-
-	return dclk_khz;
+	return color_encoding_name[encoding];
 }
-EXPORT_SYMBOL(rockchip_drm_get_dclk_by_width);
+
+const char *rockchip_drm_get_color_range_name(enum drm_color_range range)
+{
+	if (WARN_ON(range >= ARRAY_SIZE(color_range_name)))
+		return "unknown";
+
+	return color_range_name[range];
+}
 
 static int
 cea_db_tag(const u8 *db)
@@ -1111,6 +1141,28 @@ void rockchip_drm_crtc_standby(struct drm_crtc *crtc, bool standby)
 		priv->crtc_funcs[pipe]->crtc_standby(crtc, standby);
 }
 
+void rockchip_drm_crtc_output_post_enable(struct drm_crtc *crtc, int intf)
+{
+	struct rockchip_drm_private *priv = crtc->dev->dev_private;
+	int pipe = drm_crtc_index(crtc);
+
+	if (pipe < ROCKCHIP_MAX_CRTC &&
+	    priv->crtc_funcs[pipe] &&
+	    priv->crtc_funcs[pipe]->crtc_output_post_enable)
+		priv->crtc_funcs[pipe]->crtc_output_post_enable(crtc, intf);
+}
+
+void rockchip_drm_crtc_output_pre_disable(struct drm_crtc *crtc, int intf)
+{
+	struct rockchip_drm_private *priv = crtc->dev->dev_private;
+	int pipe = drm_crtc_index(crtc);
+
+	if (pipe < ROCKCHIP_MAX_CRTC &&
+	    priv->crtc_funcs[pipe] &&
+	    priv->crtc_funcs[pipe]->crtc_output_pre_disable)
+		priv->crtc_funcs[pipe]->crtc_output_pre_disable(crtc, intf);
+}
+
 int rockchip_register_crtc_funcs(struct drm_crtc *crtc,
 				 const struct rockchip_crtc_funcs *crtc_funcs)
 {
@@ -1340,12 +1392,6 @@ static int rockchip_drm_create_properties(struct drm_device *dev)
 	private->eotf_prop = prop;
 
 	prop = drm_property_create_range(dev, DRM_MODE_PROP_ATOMIC,
-					 "COLOR_SPACE", 0, 12);
-	if (!prop)
-		return -ENOMEM;
-	private->color_space_prop = prop;
-
-	prop = drm_property_create_range(dev, DRM_MODE_PROP_ATOMIC,
 					 "ASYNC_COMMIT", 0, 1);
 	if (!prop)
 		return -ENOMEM;
@@ -1504,7 +1550,7 @@ static int rockchip_drm_bind(struct device *dev)
 	int ret;
 
 	/* Remove existing drivers that may own the framebuffer memory. */
-	ret = drm_aperture_remove_framebuffers(false, &rockchip_drm_driver);
+	ret = drm_aperture_remove_framebuffers(&rockchip_drm_driver);
 	if (ret) {
 		DRM_DEV_ERROR(dev,
 			      "Failed to remove existing framebuffers - %d.\n",

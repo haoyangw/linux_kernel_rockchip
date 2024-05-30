@@ -29,7 +29,6 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
-#include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/spi/spi.h>
 
@@ -484,20 +483,6 @@ static int panel_simple_get_non_edid_modes(struct panel_simple *panel,
 	return num;
 }
 
-static void panel_simple_wait(ktime_t start_ktime, unsigned int min_ms)
-{
-	ktime_t now_ktime, min_ktime;
-
-	if (!min_ms)
-		return;
-
-	min_ktime = ktime_add(start_ktime, ms_to_ktime(min_ms));
-	now_ktime = ktime_get_boottime();
-
-	if (ktime_before(now_ktime, min_ktime))
-		panel_simple_msleep(ktime_to_ms(ktime_sub(min_ktime, now_ktime)) + 1);
-}
-
 static int panel_simple_regulator_enable(struct panel_simple *p)
 {
 	int err;
@@ -536,9 +521,9 @@ int panel_simple_loader_protect(struct drm_panel *panel)
 	struct panel_simple *p = to_panel_simple(panel);
 	int err;
 
-	err = pm_runtime_get_sync(panel->dev);
+	err = panel_simple_regulator_enable(p);
 	if (err < 0) {
-		pm_runtime_put_autosuspend(panel->dev);
+		dev_err(panel->dev, "failed to enable supply: %d\n", err);
 		return err;
 	}
 
@@ -564,30 +549,9 @@ static int panel_simple_disable(struct drm_panel *panel)
 	return 0;
 }
 
-static int panel_simple_suspend(struct device *dev)
-{
-	struct panel_simple *p = dev_get_drvdata(dev);
-
-	gpiod_set_value_cansleep(p->reset_gpio, 1);
-	gpiod_set_value_cansleep(p->enable_gpio, 0);
-
-	panel_simple_regulator_disable(p);
-
-	if (p->desc->delay.unprepare)
-		panel_simple_msleep(p->desc->delay.unprepare);
-
-	p->unprepared_time = ktime_get_boottime();
-
-	kfree(p->edid);
-	p->edid = NULL;
-
-	return 0;
-}
-
 static int panel_simple_unprepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
-	int ret;
 
 	/* Unpreparing when already unprepared is a no-op */
 	if (!p->prepared)
@@ -605,34 +569,15 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 		}
 	}
 
-	pm_runtime_mark_last_busy(panel->dev);
-	ret = pm_runtime_put_autosuspend(panel->dev);
-	if (ret < 0)
-		return ret;
+	gpiod_direction_output(p->reset_gpio, 1);
+	gpiod_direction_output(p->enable_gpio, 0);
+
+	panel_simple_regulator_disable(p);
+
+	if (p->desc->delay.unprepare)
+		panel_simple_msleep(p->desc->delay.unprepare);
+
 	p->prepared = false;
-
-	return 0;
-}
-
-static int panel_simple_resume(struct device *dev)
-{
-	struct panel_simple *p = dev_get_drvdata(dev);
-	int err;
-
-	panel_simple_wait(p->unprepared_time, p->desc->delay.unprepare);
-
-	err = panel_simple_regulator_enable(p);
-	if (err < 0) {
-		dev_err(dev, "failed to enable supply: %d\n", err);
-		return err;
-	}
-
-	gpiod_set_value_cansleep(p->enable_gpio, 1);
-
-	if (p->desc->delay.prepare)
-		panel_simple_msleep(p->desc->delay.prepare);
-
-	p->prepared_time = ktime_get_boottime();
 
 	return 0;
 }
@@ -640,24 +585,29 @@ static int panel_simple_resume(struct device *dev)
 static int panel_simple_prepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
-	int ret;
+	int err;
 
 	/* Preparing when already prepared is a no-op */
 	if (p->prepared)
 		return 0;
 
-	ret = pm_runtime_get_sync(panel->dev);
-	if (ret < 0) {
-		pm_runtime_put_autosuspend(panel->dev);
-		return ret;
+	err = panel_simple_regulator_enable(p);
+	if (err < 0) {
+		dev_err(panel->dev, "failed to enable supply: %d\n", err);
+		return err;
 	}
 
-	gpiod_set_value_cansleep(p->reset_gpio, 1);
+	gpiod_direction_output(p->enable_gpio, 1);
+
+	if (p->desc->delay.prepare)
+		panel_simple_msleep(p->desc->delay.prepare);
+
+	gpiod_direction_output(p->reset_gpio, 1);
 
 	if (p->desc->delay.reset)
 		panel_simple_msleep(p->desc->delay.reset);
 
-	gpiod_set_value_cansleep(p->reset_gpio, 0);
+	gpiod_direction_output(p->reset_gpio, 0);
 
 	if (p->desc->delay.init)
 		panel_simple_msleep(p->desc->delay.init);
@@ -702,16 +652,11 @@ static int panel_simple_get_modes(struct drm_panel *panel,
 
 	/* probe EDID if a DDC bus is available */
 	if (p->ddc) {
-		pm_runtime_get_sync(panel->dev);
-
 		if (!p->edid)
 			p->edid = drm_get_edid(connector, p->ddc);
 
 		if (p->edid)
 			num += drm_add_edid_modes(connector, p->edid);
-
-		pm_runtime_mark_last_busy(panel->dev);
-		pm_runtime_put_autosuspend(panel->dev);
 	}
 
 	/* add hard-coded panel modes */
@@ -1028,31 +973,18 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 
 	dev_set_drvdata(dev, panel);
 
-	/*
-	 * We use runtime PM for prepare / unprepare since those power the panel
-	 * on and off and those can be very slow operations. This is important
-	 * to optimize powering the panel on briefly to read the EDID before
-	 * fully enabling the panel.
-	 */
-	pm_runtime_enable(dev);
-	pm_runtime_set_autosuspend_delay(dev, 1000);
-	pm_runtime_use_autosuspend(dev);
-
 	drm_panel_init(&panel->base, dev, &panel_simple_funcs, connector_type);
 
 	err = drm_panel_of_backlight(&panel->base);
 	if (err) {
 		dev_err_probe(dev, err, "Could not find backlight\n");
-		goto disable_pm_runtime;
+		goto free_ddc;
 	}
 
 	drm_panel_add(&panel->base);
 
 	return 0;
 
-disable_pm_runtime:
-	pm_runtime_dont_use_autosuspend(dev);
-	pm_runtime_disable(dev);
 free_ddc:
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
@@ -1068,8 +1000,6 @@ static void panel_simple_remove(struct device *dev)
 	drm_panel_disable(&panel->base);
 	drm_panel_unprepare(&panel->base);
 
-	pm_runtime_dont_use_autosuspend(dev);
-	pm_runtime_disable(dev);
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
 }
@@ -1336,21 +1266,21 @@ static const struct panel_desc auo_g104sn02 = {
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
-static const struct drm_display_mode auo_g121ean01_mode = {
-	.clock = 66700,
-	.hdisplay = 1280,
-	.hsync_start = 1280 + 58,
-	.hsync_end = 1280 + 58 + 8,
-	.htotal = 1280 + 58 + 8 + 70,
-	.vdisplay = 800,
-	.vsync_start = 800 + 6,
-	.vsync_end = 800 + 6 + 4,
-	.vtotal = 800 + 6 + 4 + 10,
+static const struct display_timing auo_g121ean01_timing = {
+	.pixelclock = { 60000000, 74400000, 90000000 },
+	.hactive = { 1280, 1280, 1280 },
+	.hfront_porch = { 20, 50, 100 },
+	.hback_porch = { 20, 50, 100 },
+	.hsync_len = { 30, 100, 200 },
+	.vactive = { 800, 800, 800 },
+	.vfront_porch = { 2, 10, 25 },
+	.vback_porch = { 2, 10, 25 },
+	.vsync_len = { 4, 18, 50 },
 };
 
 static const struct panel_desc auo_g121ean01 = {
-	.modes = &auo_g121ean01_mode,
-	.num_modes = 1,
+	.timings = &auo_g121ean01_timing,
+	.num_timings = 1,
 	.bpc = 8,
 	.size = {
 		.width = 261,
@@ -1526,7 +1456,9 @@ static const struct panel_desc auo_t215hvn01 = {
 	.delay = {
 		.disable = 5,
 		.unprepare = 1000,
-	}
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
 static const struct drm_display_mode avic_tm070ddh03_mode = {
@@ -4836,17 +4768,10 @@ static void panel_simple_platform_shutdown(struct platform_device *pdev)
 	panel_simple_shutdown(&pdev->dev);
 }
 
-static const struct dev_pm_ops panel_simple_pm_ops = {
-	SET_RUNTIME_PM_OPS(panel_simple_suspend, panel_simple_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-};
-
 static struct platform_driver panel_simple_platform_driver = {
 	.driver = {
 		.name = "panel-simple",
 		.of_match_table = platform_of_match,
-		.pm = &panel_simple_pm_ops,
 	},
 	.probe = panel_simple_platform_probe,
 	.remove = panel_simple_platform_remove,
@@ -5158,7 +5083,7 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 		props.max_brightness = 255;
 
 		panel->base.backlight =
-			devm_backlight_device_register(dev, "dcs-backlight",
+			devm_backlight_device_register(dev, dev_name(dev),
 						       dev, panel, &dcs_bl_ops,
 						       &props);
 		if (IS_ERR(panel->base.backlight)) {
@@ -5203,7 +5128,6 @@ static struct mipi_dsi_driver panel_simple_dsi_driver = {
 	.driver = {
 		.name = "panel-simple-dsi",
 		.of_match_table = dsi_of_match,
-		.pm = &panel_simple_pm_ops,
 	},
 	.probe = panel_simple_dsi_probe,
 	.remove = panel_simple_dsi_remove,
