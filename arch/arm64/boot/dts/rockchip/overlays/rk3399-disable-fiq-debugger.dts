@@ -1,0 +1,17 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	metadata {
+		title = "Disable FIQ Debugger";
+		compatible = "rockchip,rk3399";
+		category = "misc";
+		exclusive = "fiq_debugger";
+		description = "Disable FIQ Debugger.";
+	};
+};
+
+&fiq_debugger {
+	status = "okay";
+	rockchip,serial-id = <0xffffffff>;
+};
