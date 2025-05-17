@@ -23,7 +23,7 @@ endif
 
 -include $(src)/Makefile.rk3588-can
 
-dtb-$(CONFIG_CLK_RK3308) += \
+dtbo-$(CONFIG_CLK_RK3308) += \
 	radxa-s0-ext-antenna.dtbo \
 	rk3308-bs-opp-1008.dtbo \
 	rk3308-bs-opp-1296.dtbo \
@@ -57,13 +57,13 @@ dtb-$(CONFIG_CLK_RK3308) += \
 	rk3308-uart3-m1.dtbo \
 	rock-pi-s-poe-headphone.dtbo
 
-dtb-$(CONFIG_CLK_RK3328) += \
+dtbo-$(CONFIG_CLK_RK3328) += \
 	rk3328-pwm2.dtbo \
 	rk3328-uart1.dtbo \
 	rk3328-uart2-m1.dtbo \
 	rk3328-spi0-spidev.dtbo
 
-dtb-$(CONFIG_CLK_RK3399) += \
+dtbo-$(CONFIG_CLK_RK3399) += \
 	rk3399-disable-fiq-debugger.dtbo \
 	rk3399-dwc3-0-host.dtbo \
 	rk3399-dwc3-0-otg.dtbo \
@@ -113,7 +113,7 @@ dtb-$(CONFIG_CLK_RK3399) += \
 	rock-4-radxa-camera-8m.dtbo \
 	rock-4c-plus-raspi-7inch-touchscreen.dtbo
 
-dtb-$(CONFIG_CPU_RK3399) += \
+dtbo-$(CONFIG_CPU_RK3399) += \
 	rk3399-cs003-display.dtbo \
 	rock-4c-plus-radxa-display-8hd.dtbo \
 	rock-4c-plus-radxa-display-10fhd.dtbo \
@@ -121,7 +121,7 @@ dtb-$(CONFIG_CPU_RK3399) += \
 	rock-4se-radxa-display-8hd.dtbo \
 	rock-4-radxa-display-10hd.dtbo
 
-dtb-$(CONFIG_CLK_RK3528) += \
+dtbo-$(CONFIG_CLK_RK3528) += \
 	medge-rk3528a-io-enable-pcie.dtbo \
 	rk3528-dwc3-host.dtbo \
 	rk3528-dwc3-otg.dtbo \
@@ -153,7 +153,7 @@ dtb-$(CONFIG_CLK_RK3528) += \
 	rock-2a-enable-pcie.dtbo \
 	rock-2a-poe-hat.dtbo
 
-dtb-$(CONFIG_CLK_RK3568) += \
+dtbo-$(CONFIG_CLK_RK3568) += \
 	audioinjector-isolated-soundcard.dtbo \
 	radxa-cm3-io-camera-v2-imx219-cam1.dtbo \
 	radxa-cm3-io-camera-v2-imx219-cam2.dtbo \
@@ -300,7 +300,7 @@ dtb-$(CONFIG_CLK_RK3568) += \
 	rock-3c-rpi-camera-v2.dtbo \
 	rock-3c-radxa-camera-8m.dtbo
 
-dtb-$(CONFIG_CPU_RK3568) += \
+dtbo-$(CONFIG_CPU_RK3568) += \
 	radxa-cm3-io-jymx1013833281be-display.dtbo \
 	radxa-cm3-io-radxa-10p1inch-display.dtbo \
 	radxa-cm3-io-radxa-display-8hd.dtbo \
@@ -349,7 +349,7 @@ dtb-$(CONFIG_CPU_RK3568) += \
 	rock-3c-radxa-display-8hd.dtbo \
 	rock-3c-radxa-display-10hd.dtbo
 
-dtb-$(CONFIG_CLK_RK3576) += \
+dtbo-$(CONFIG_CLK_RK3576) += \
 	rk3576-disable-fiq-debugger.dtbo \
 	rk3576-dwc3-host.dtbo \
 	rk3576-dwc3-otg.dtbo \
@@ -383,7 +383,7 @@ dtb-$(CONFIG_CLK_RK3576) += \
 	rk3576-uart7-m0.dtbo \
 	rk3576-w1-gpio1-d0.dtbo
 
-dtb-$(CONFIG_CPU_RK3576) += \
+dtbo-$(CONFIG_CPU_RK3576) += \
 	radxa-cm4-io-radxa-camera-4k.dtbo \
 	radxa-cm4-io-radxa-camera-8m-219-on-cam1.dtbo \
 	radxa-cm4-io-radxa-camera-8m-219-on-cam2.dtbo \
@@ -399,7 +399,7 @@ dtb-$(CONFIG_CPU_RK3576) += \
 	rock-4d-rpi-camera-v1_3.dtbo \
 	rock-4d-rpi-camera-v2.dtbo
 
-dtb-$(CONFIG_CLK_RK3588) += \
+dtbo-$(CONFIG_CLK_RK3588) += \
 	radxa-nx5-io-okdo-camera-5mp-cam0.dtbo \
 	radxa-nx5-io-okdo-camera-5mp-cam1.dtbo \
 	radxa-nx5-io-rpi-camera-v1p3-cam0.dtbo \
@@ -545,7 +545,7 @@ dtb-$(CONFIG_CLK_RK3588) += \
 	rock-5d-rpi-camera-v2-mipi-rx0.dtbo \
 	rock-5d-rpi-camera-v2-mipi-rx1.dtbo
 
-dtb-$(CONFIG_CPU_RK3588) += \
+dtbo-$(CONFIG_CPU_RK3588) += \
 	radxa-cm5-io-allnet-5inch-display.dtbo \
 	radxa-cm5-io-dwc3-host.dtbo \
 	radxa-cm5-io-okdo-5mp.dtbo \
@@ -632,15 +632,15 @@ dtb-$(CONFIG_CPU_RK3588) += \
 	rock-5t-radxa-display-10fhd.dtbo \
 	rock-5t-radxa-display-10hd.dtbo
 
-dtb-$(CONFIG_ARCH_ROCKCHIP) += \
+dtbo-$(CONFIG_ARCH_ROCKCHIP) += \
 	rockchip-gpu-disable.dtbo \
 	rockchip-watchdog.dtbo \
 	rockchip-uart-dma.dtbo
 
 dtbotxt-$(CONFIG_ARCH_ROCKCHIP) += \
-	README.overlays
+	README.rockchip-overlays
 
-targets += $(dtb-y) $(dtbotxt-y)
+targets += $(dtbo-y) $(dtbotxt-y)
 
-always-y		:= $(dtb-y) $(dtbotxt-y)
-clean-files		:= *.dtbo *.scr
+always-y		:= $(dtbo-y) $(dtbotxt-y)
+clean-files		:= *.dtbo

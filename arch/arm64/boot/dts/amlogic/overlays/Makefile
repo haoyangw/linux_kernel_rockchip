@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_MESON) += \
+dtbo-$(CONFIG_ARCH_MESON) += \
 	meson-g12-disable-gpu.dtbo \
 	meson-g12-disable-hdmi.dtbo \
 	meson-g12-disable-usb.dtbo \
@@ -50,9 +50,9 @@ dtb-$(CONFIG_ARCH_MESON) += \
 	radxa-zero2-radxa-25w-poe.dtbo
 
 dtbotxt-$(CONFIG_ARCH_MESON) += \
-	README.overlays
+	README.rockchip-overlays
 
-targets += $(dtb-y) $(dtbotxt-y)
+targets += $(dtbo-y) $(dtbotxt-y)
 
-always-y		:= $(dtb-y) $(dtbotxt-y)
-clean-files		:= *.dtbo *.scr
+always-y		:= $(dtbo-y) $(dtbotxt-y)
+clean-files		:= *.dtbo
