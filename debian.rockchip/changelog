@@ -2,6 +2,7 @@ linux-rockchip (6.1.0-1001.1) noble; urgency=medium
 
   * Initial release
   * Import Rockchip BSP 6.1 rkr5.1 kernel source from radxa/kernel
+  * Integrate Radxa device tree overlays into kernel and build in-tree
   * Create custom kernel defconfig based on rockchip_linux_defconfig
 
  -- Wang Haoyang <haoyangw@gmail.com>  Mon, 02 Jun 2025 20:54:49 +0800
