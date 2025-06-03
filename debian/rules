@@ -7,6 +7,9 @@
 # Copyright (c) 2007 Ben Collins <bcollins@ubuntu.com>
 #
 
+# Define DEB_HOST_* and DEB_BUILD_* variables
+include /usr/share/dpkg/architecture.mk
+
 DEBIAN=$(shell awk -F= '($$1 == "DEBIAN") { print $$2 }' <debian/debian.env)
 
 # dpkg-buildpackage passes options that are incomptatible
@@ -16,6 +19,13 @@ unexport LDFLAGS
 
 export LC_ALL=C
 export SHELL=/bin/bash -e
+
+# Configure compiler if target architecture is defined
+ifneq (,$(DEB_HOST_GNU_TYPE))
+export CROSS_COMPILE ?= $(DEB_HOST_GNU_TYPE)-
+## Compile with GCC by default
+export CC ?= $(CROSS_COMPILE)gcc
+endif
 
 # Where do we find the common configuration.
 export DROOT=debian
