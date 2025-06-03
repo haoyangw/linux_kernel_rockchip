@@ -172,6 +172,10 @@
 	};
 };
 
+&avsd {
+        status = "okay";
+};
+
 &i2c0 {
 	status = "okay";
 	pinctrl-names = "default";

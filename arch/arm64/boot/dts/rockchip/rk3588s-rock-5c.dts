@@ -223,6 +223,10 @@
 	};
 };
 
+&avsd {
+        status = "okay";
+};
+
 /* CPU */
 
 &cpu_l0 {
