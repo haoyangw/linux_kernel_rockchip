@@ -1,3 +1,11 @@
+linux-rockchip (6.1.0-1002.2) noble; urgency=medium
+
+  * ASoC: rockchip: fixes DMA issue for dp0 with 44100 period size
+  * arm64: dts: rockchip: enable avsd for radxa rock 5 boards
+  * Rebuild source package on arm64 instead of amd64
+
+ -- Wang Haoyang <haoyangw@gmail.com>  Wed, 04 Jun 2025 19:05:49 +0800
+
 linux-rockchip (6.1.0-1001.1) noble; urgency=medium
 
   * Initial release
