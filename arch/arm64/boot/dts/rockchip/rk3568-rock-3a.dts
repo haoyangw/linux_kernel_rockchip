@@ -14,6 +14,13 @@
 	model = "Radxa ROCK3 Model A";
 	compatible = "radxa,rock3a", "rockchip,rk3568";
 
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		cooling-levels = <0 64 128 192 255>;
+		pwms = <&pwm8 0 10000 0>;
+	};
+
 	fiq_debugger: fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
 		rockchip,serial-id = <2>;
@@ -116,25 +123,15 @@
 
 	rk809_sound: rk809-sound {
 		status = "okay";
-		compatible = "simple-audio-card";
-		simple-audio-card,format = "i2s";
-		simple-audio-card,name = "rockchip,rk809-codec";
-		simple-audio-card,mclk-fs = <256>;
-
-		simple-audio-card,cpu {
-			sound-dai = <&i2s1_8ch>;
-		};
-		simple-audio-card,codec {
-			sound-dai = <&rk809_codec>;
-		};
-	};
-
-	rk_headset: rk-headset {
-		compatible = "rockchip_headset";
-		headset_gpio = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
+		compatible = "rockchip,multicodecs-card";
+		rockchip,card-name = "rockchip-rk809";
+		hp-det-gpio = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
+		rockchip,format = "i2s";
+		rockchip,mclk-fs = <256>;
+		rockchip,cpu = <&i2s1_8ch>;
+		rockchip,codec = <&rk809_codec>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&hp_det>;
-		io-channels = <&saradc 2>;    //HP_HOOK pin
 	};
 
 	dc_12v: dc-12v {
@@ -196,6 +193,7 @@
 		pinctrl-0 = <&vcc5v0_hub_en>;
 		regulator-name = "vcc5v0_hub";
 		regulator-always-on;
+		regulator-boot-on;
 	};
 
 	pcie30_avdd0v9: pcie30-avdd0v9 {
@@ -286,11 +284,11 @@
 		compatible = "gpio-leds";
 		status = "okay";
 
-		user-led {
+		io-led {
 			gpios = <&gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "timer";
-			default-state = "on";
-			pinctrl-0 = <&user_led>;
+			label = "blue:heartbeat";
+			linux,default-trigger = "heartbeat";
+			pinctrl-0 = <&io_led>;
 		};
 
 		wifi-led {
@@ -640,10 +638,17 @@
 			status = "okay";
 		};
 	};
+
+	eeprom:	at24c16@50 {
+		status = "okay";
+		compatible = "atmel,24c16";
+		reg = <0x50>;
+		pagesize = <16>;
+	};
 };
 
 &i2c5 {
-	status = "okay";	
+	status = "okay";
 	pinctrl-0 = <&i2c5m0_xfer>;
 
 	hym8563: hym8563@51 {
@@ -701,6 +706,12 @@
 	vccio7-supply = <&vcc_3v3>;
 };
 
+&pwm8 {
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm8m0_pins>;
+	status = "okay";
+};
+
 &rk_rga {
 	status = "okay";
 };
@@ -754,6 +765,8 @@
 &sdmmc0 {
 	max-frequency = <150000000>;
 	supports-sd;
+	no-sdio;
+	no-mmc;
 	bus-width = <4>;
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
@@ -811,6 +824,28 @@
 					};
 				};         
 		};
+};
+
+&soc_thermal {
+	sustainable-power = <5000>; /* milliwatts */
+	cooling-maps {
+		map3 {
+			trip = <&target>;
+			cooling-device =
+				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+			contribution = <8192>;
+		};
+		map4 {
+			trip = <&threshold>;
+			cooling-device =
+				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+			contribution = <8192>;
+		};
+	};
+};
+
+&threshold {
+	temperature = <60000>;
 };
 
 &tsadc {
@@ -1012,6 +1047,21 @@
 
 &rockchip_suspend {
 	status = "okay";
+	rockchip,sleep-debug-en = <1>;
+	rockchip,sleep-mode-config = <
+		(0
+		| RKPM_SLP_CENTER_OFF
+		| RKPM_SLP_HW_PLLS_OFF
+		| RKPM_SLP_PMUALIVE_32K
+		| RKPM_SLP_32K_PVTM
+		)
+	>;
+	rockchip,wakeup-config = <
+		(0
+		| RKPM_GPIO_WKUP_EN
+		| RKPM_USB_WKUP_EN
+		)
+	>;
 };
 
 &pinctrl {
@@ -1076,7 +1126,7 @@
 	};
 
 	leds {
-		user_led: user-led {
+		io_led: io-led {
 			rockchip,pins = <0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
@@ -1089,4 +1139,119 @@
 &vp0 {
 	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0)>;
 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+};
+
+&gpio0 {
+	gpio-line-names =
+		/* GPIO0_A0-A3 */
+		"", "", "", "",
+		/* GPIO0_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO0_B0-B3 */
+		"", "", "", "PIN_28",
+		/* GPIO0_B4-B7 */
+		"PIN_27", "PIN_7", "PIN_16", "",
+
+		/* GPIO0_C0-C3 */
+		"PIN_15", "PIN_22", "", "",
+		/* GPIO0_C4-C7 */
+		"", "", "", "",
+
+		/* GPIO0_D0-D3 */
+		"PIN_10", "PIN_8", "", "",
+		/* GPIO0_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio1 {
+	gpio-line-names =
+		/* GPIO1_A0-A3 */
+		"PIN_3", "PIN_5", "", "",
+		/* GPIO1_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO1_B0-B3 */
+		"", "", "", "",
+		/* GPIO1_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO1_C0-C3 */
+		"", "", "", "",
+		/* GPIO1_C4-C7 */
+		"", "", "", "",
+
+		/* GPIO1_D0-D3 */
+		"", "", "", "",
+		/* GPIO1_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio2 {
+	gpio-line-names =
+		/* GPIO2_A0-A3 */
+		"", "", "", "",
+		/* GPIO2_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO2_B0-B3 */
+		"", "", "", "",
+		/* GPIO2_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO2_C0-C3 */
+		"", "", "", "",
+		/* GPIO2_C4-C7 */
+		"", "", "", "",
+
+		/* GPIO2_D0-D3 */
+		"", "", "", "",
+		/* GPIO2_D4-D7 */
+		"", "", "", "PIN_29";
+};
+
+&gpio3 {
+	gpio-line-names =
+		/* GPIO3_A0-A3 */
+		"PIN_31", "", "PIN_36", "PIN_12",
+		/* GPIO3_A4-A7 */
+		"PIN_35", "PIN_40", "PIN_38", "",
+
+		/* GPIO3_B0-B3 */
+		"", "", "PIN_18", "",
+		/* GPIO3_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO3_C0-C3 */
+		"", "", "PIN_32", "PIN_33",
+		/* GPIO3_C4-C7 */
+		"PIN_11", "PIN_13", "", "",
+
+		/* GPIO3_D0-D3 */
+		"", "", "", "",
+		/* GPIO3_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio4 {
+	gpio-line-names =
+		/* GPIO4_A0-A3 */
+		"", "", "", "",
+		/* GPIO4_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO4_B0-B3 */
+		"", "", "", "",
+		/* GPIO4_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO4_C0-C3 */
+		"", "", "PIN_23", "PIN_19",
+		/* GPIO4_C4-C7 */
+		"", "PIN_21", "PIN_24", "",
+
+		/* GPIO4_D0-D3 */
+		"", "PIN_26", "", "",
+		/* GPIO4_D4-D7 */
+		"", "", "", "";
 };
