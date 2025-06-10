@@ -63,6 +63,16 @@
 		};
 	};
 
+	hdmi0_sound: hdmi0-sound {
+               status = "okay";
+               compatible = "rockchip,hdmi";
+               rockchip,mclk-fs = <128>;
+               rockchip,card-name = "rockchip-hdmi0";
+               rockchip,cpu = <&i2s0_8ch>;
+               rockchip,codec = <&hdmi>;
+               rockchip,jack-det;
+       };
+
 	pdmics: dummy-codec {
 		status = "disabled";
 		compatible = "rockchip,dummy-codec";
@@ -311,13 +321,7 @@
 };
 
 &hdmi_sound {
-	status = "okay";
-	compatible = "rockchip,hdmi";
-	rockchip,mclk-fs = <128>;
-	rockchip,card-name = "rockchip-hdmi0";
-	rockchip,cpu = <&i2s0_8ch>;
-	rockchip,codec = <&hdmi>;
-	rockchip,jack-det;
+	status = "disabled";
 };
 
 &route_hdmi {
