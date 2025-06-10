@@ -1,3 +1,12 @@
+linux-rockchip (6.1.0-1003.3) noble; urgency=medium
+
+  * arm64: dts: rockchip: Add Rock 3A and 3B device trees to
+    add kernel support for these boards
+  * arm64: dts: rockchip: Cleanup 'hdmi_sound' node in Rock 3A
+    and 3B device trees
+
+ -- Wang Haoyang <haoyangw@gmail.com>  Tue, 10 Jun 2025 02:28:10 +0000
+
 linux-rockchip (6.1.0-1002.2) noble; urgency=medium
 
   * ASoC: rockchip: fixes DMA issue for dp0 with 44100 period size
