@@ -54,7 +54,7 @@
 		status = "okay";
 		compatible = "rockchip,hdmi";
 		rockchip,mclk-fs = <128>;
-		rockchip,card-name = "rockchip-hdmi";
+		rockchip,card-name = "rockchip-hdmi0";
 		rockchip,cpu = <&i2s0_8ch>;
 		rockchip,codec = <&hdmi>;
 		rockchip,jack-det;
