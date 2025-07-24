@@ -197,6 +197,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-odroid-m1.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-radxa-e25.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-rock-3a-sata.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-rock-3a.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-rock-3b.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-yy3568.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-toybrick-sd0-android.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-toybrick-sd0-linux.dtb
