@@ -63,7 +63,7 @@
 		};
 	};
 
-	hdmi0_sound: hdmi0-sound {
+	hdmi_sound: hdmi-sound {
                status = "okay";
                compatible = "rockchip,hdmi";
                rockchip,mclk-fs = <128>;
@@ -321,7 +321,7 @@
 };
 
 &hdmi_sound {
-	status = "disabled";
+	status = "okay";
 };
 
 &route_hdmi {
