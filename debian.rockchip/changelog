@@ -1,3 +1,20 @@
+linux-rockchip (6.1.0-1004.4) noble; urgency=medium
+
+  * dts: rock-3: Enable NPU-related nodes
+  * arch: arm64: rockchip: use panfrost driver for gpu of rk3576
+  * can: mcp251x: simplify with spi_get_device_match_data()
+  * can: mcp251x: Fix up includes
+  * dts: rk3588s: Enable 'av1d' and 'av1d_mmu' nodes for AV1 video decoding
+  * dts: rock-3: Update property of 'i2s1_8ch' node
+  * dts: rk356x boards: Standardise hdmi sound card name
+  * dts: rock-3b: Improve 'hdmi-sound' node
+  * dts: rock-3a: Change compatible driver for 'hdmi-sound' node
+  * dts: rockchip: Improve Rock 3B/5B/5B+ CPU fan curve
+  * dts: rock-5b-plus: Support a wider range of PD input voltages
+  * drivers: net: ethernet: realtek: Backport r8169 driver from Linux 6.8
+
+ -- Wang Haoyang <haoyangw@gmail.com>  Sat, 26 Jul 2025 10:55:42 +0800
+
 linux-rockchip (6.1.0-1003.3) noble; urgency=medium
 
   * arm64: dts: rockchip: Add Rock 3A and 3B device trees to
