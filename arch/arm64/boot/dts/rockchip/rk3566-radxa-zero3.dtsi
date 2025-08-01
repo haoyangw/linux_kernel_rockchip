@@ -425,6 +425,11 @@
 
 &rknpu {
 	rknpu-supply = <&vdd_gpu>;
+	status = "okay";
+};
+
+&rknpu_mmu {
+	status = "okay";
 };
 
 &saradc {
