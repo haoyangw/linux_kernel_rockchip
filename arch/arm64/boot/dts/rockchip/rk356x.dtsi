@@ -230,6 +230,8 @@
 		memory-region-names = "drm-logo", "drm-cubic-lut";
 		ports = <&vop_out>;
 		devfreq = <&dmc>;
+		quirk-prefer-fhd;
+		quirk-prefer-large-60;
 
 		route {
 			route_dsi0: route-dsi0 {
