@@ -1,3 +1,16 @@
+linux-rockchip (6.1.0-1005.5) noble; urgency=medium
+
+  * dts: rockchip: Tune Rock 3B/5B/5B+ fan curve further
+  * dts: rk356x: Fix RKNPU declaration in device trees
+  * dts: rk356x: Enable RKNPU node on more boards
+  * dts: rock-3a: Enable NPU-related nodes
+  * dts: rock-3a: Update property of 'i2s1_8ch' node
+  * dts: rock-3a: Change compatible driver for 'hdmi-sound' node
+  * dts: rock 3: Fix mouse flickering in desktop
+  * dts: rock-3a: Rollback to Radxa 5.10 dts
+
+ -- Wang Haoyang <haoyangw@gmail.com>  Fri, 01 Aug 2025 21:07:43 +0800
+
 linux-rockchip (6.1.0-1004.4) noble; urgency=medium
 
   * dts: rock-3: Enable NPU-related nodes
